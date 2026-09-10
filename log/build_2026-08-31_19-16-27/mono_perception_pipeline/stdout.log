@@ -1,0 +1,30 @@
+running egg_info
+creating ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info
+writing ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/PKG-INFO
+writing dependency_links to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/dependency_links.txt
+writing requirements to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/requires.txt
+writing top-level names to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/top_level.txt
+writing manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'
+reading manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'
+writing manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build
+creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib
+creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline
+copying mono_perception_pipeline/__init__.py -> /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline
+running install
+running install_lib
+creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline
+copying /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline/__init__.py -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline
+byte-compiling /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline/__init__.py to __init__.cpython-312.pyc
+running install_data
+creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index
+creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index
+creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index/packages
+copying resource/mono_perception_pipeline -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index/packages
+copying package.xml -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/mono_perception_pipeline
+running install_egg_info
+Copying ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info to /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline-0.0.0-py3.12.egg-info
+running install_scripts
+writing list of installed files to '/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/install.log'

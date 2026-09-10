@@ -1,0 +1,14 @@
+package.xml
+setup.cfg
+setup.py
+../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/PKG-INFO
+../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt
+../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/dependency_links.txt
+../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/requires.txt
+../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/top_level.txt
+../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/zip-safe
+mono_perception_pipeline/__init__.py
+resource/mono_perception_pipeline
+test/test_copyright.py
+test/test_flake8.py
+test/test_pep257.py

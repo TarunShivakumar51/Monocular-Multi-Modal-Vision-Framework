@@ -1,0 +1,112 @@
+[0.000000] (-) TimerEvent: {}
+[0.001442] (mono_perception_pipeline) JobQueued: {'identifier': 'mono_perception_pipeline', 'dependencies': OrderedDict()}
+[0.001979] (mono_perception_pipeline) JobStarted: {'identifier': 'mono_perception_pipeline'}
+[0.099351] (-) TimerEvent: {}
+[0.200802] (-) TimerEvent: {}
+[0.301726] (-) TimerEvent: {}
+[0.402624] (-) TimerEvent: {}
+[0.519859] (-) TimerEvent: {}
+[0.621312] (-) TimerEvent: {}
+[0.722046] (-) TimerEvent: {}
+[0.823353] (-) TimerEvent: {}
+[0.924606] (-) TimerEvent: {}
+[1.026093] (-) TimerEvent: {}
+[1.128518] (-) TimerEvent: {}
+[1.231095] (-) TimerEvent: {}
+[1.331799] (-) TimerEvent: {}
+[1.432399] (-) TimerEvent: {}
+[1.533190] (-) TimerEvent: {}
+[1.634043] (-) TimerEvent: {}
+[1.735078] (-) TimerEvent: {}
+[1.836616] (-) TimerEvent: {}
+[1.937795] (-) TimerEvent: {}
+[2.038944] (-) TimerEvent: {}
+[2.140325] (-) TimerEvent: {}
+[2.241094] (-) TimerEvent: {}
+[2.341634] (-) TimerEvent: {}
+[2.442450] (-) TimerEvent: {}
+[2.543156] (-) TimerEvent: {}
+[2.644120] (-) TimerEvent: {}
+[2.745056] (-) TimerEvent: {}
+[2.846045] (-) TimerEvent: {}
+[2.947229] (-) TimerEvent: {}
+[3.048609] (-) TimerEvent: {}
+[3.150179] (-) TimerEvent: {}
+[3.253555] (-) TimerEvent: {}
+[3.354641] (-) TimerEvent: {}
+[3.458456] (-) TimerEvent: {}
+[3.560224] (-) TimerEvent: {}
+[3.663475] (-) TimerEvent: {}
+[3.767302] (-) TimerEvent: {}
+[3.869628] (-) TimerEvent: {}
+[3.974444] (-) TimerEvent: {}
+[4.077071] (-) TimerEvent: {}
+[4.181666] (-) TimerEvent: {}
+[4.283398] (-) TimerEvent: {}
+[4.386302] (-) TimerEvent: {}
+[4.492786] (-) TimerEvent: {}
+[4.594512] (-) TimerEvent: {}
+[4.696062] (-) TimerEvent: {}
+[4.797173] (-) TimerEvent: {}
+[4.898484] (-) TimerEvent: {}
+[4.999046] (-) TimerEvent: {}
+[5.099522] (-) TimerEvent: {}
+[5.200332] (-) TimerEvent: {}
+[5.301159] (-) TimerEvent: {}
+[5.401878] (-) TimerEvent: {}
+[5.502707] (-) TimerEvent: {}
+[5.603709] (-) TimerEvent: {}
+[5.704562] (-) TimerEvent: {}
+[5.806401] (-) TimerEvent: {}
+[5.907486] (-) TimerEvent: {}
+[6.008264] (-) TimerEvent: {}
+[6.108909] (-) TimerEvent: {}
+[6.209684] (-) TimerEvent: {}
+[6.310571] (-) TimerEvent: {}
+[6.411378] (-) TimerEvent: {}
+[6.511953] (-) TimerEvent: {}
+[6.537129] (mono_perception_pipeline) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../build/mono_perception_pipeline', 'build', '--build-base', '/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build', 'install', '--record', '/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/tarun2006/mm_ros2_ws/src/mono_perception_pipeline', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'USER': 'tarun2006', 'GZ_CONFIG_PATH': '/opt/ros/jazzy/opt/sdformat_vendor/share/gz', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/sdformat_vendor/lib:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_tools_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'WT_PROFILE_ID': '{4185bbab-399b-52fe-b901-6e0e706455ea}', 'HOME': '/home/tarun2006', 'OLDPWD': '/home/tarun2006/mm_ros2_ws/src/mono_perception_pipeline', 'ROS_PYTHON_VERSION': '3', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'WSL_DISTRO_NAME': 'Ubuntu', '_colcon_cd_root': '/opt/ros/jazzy/', 'WAYLAND_DISPLAY': 'wayland-0', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'tarun2006', 'NAME': 'TarunShivakumar', 'WSL_INTEROP': '/run/WSL/459_interop', 'PULSE_SERVER': 'unix:/mnt/wslg/PulseServer', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'TERM': 'xterm-256color', 'RBENV_SHELL': 'bash', 'PATH': '/home/tarun2006/.local/bin:/home/tarun2006/.rbenv/shims:/home/tarun2006/.rbenv/bin:/home/tarun2006/.rbenv/shims:/home/tarun2006/.rbenv/bin:/opt/ros/jazzy/opt/gz_tools_vendor/bin:/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/bin/x64:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/bin:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Users/tarun/OneDrive/Desktop/MatLab/bin:/mnt/c/Program Files (x86)/Pulse Secure/VC142.CRT/X64/:/mnt/c/Program Files (x86)/Pulse Secure/VC142.CRT/X86/:/mnt/c/Program Files (x86)/Common Files/Pulse Secure/TNC Client Plugin/:/mnt/c/Program Files/PuTTY/:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Python313:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Python313/Scripts:/mnt/c/Program Files/MATLAB/R2026a/bin:/mnt/c/Users/tarun/Downloads/PussyEater/bin:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/nodejs/:/mnt/c/Program Files (x86)/ZED SDK/dependencies/freeglut_2.8/x64:/mnt/c/Program Files (x86)/ZED SDK/dependencies/glew-1.12.0/x64:/mnt/c/Program Files (x86)/ZED SDK/dependencies/opencv_3.1.0/x64:/mnt/c/Program Files (x86)/ZED SDK/bin:/mnt/c/Program Files/NVIDIA Corporation/Nsight Compute 2026.1.0/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/bin/x64:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/bin:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Users/tarun/OneDrive/Desktop/MatLab/bin:/mnt/c/Program Files (x86)/Pulse Secure/VC142.CRT/X64/:/mnt/c/Program Files (x86)/Pulse Secure/VC142.CRT/X86/:/mnt/c/Program Files (x86)/Common Files/Pulse Secure/TNC Client Plugin/:/mnt/c/Program Files/PuTTY/:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Python313:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Python313/Scripts:/mnt/c/Program Files/MATLAB/R2026a/bin:/mnt/c/Users/tarun/Downloads/PussyEater/bin:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/nodejs/:/mnt/c/Program Files (x86)/ZED SDK/dependencies/freeglut_2.8/x64:/mnt/c/Program Files (x86)/ZED SDK/dependencies/glew-1.12.0/x64:/mnt/c/Program Files (x86)/ZED SDK/dependencies/opencv_3.1.0/x64:/mnt/c/Program Files (x86)/ZED SDK/bin:/mnt/c/Program Files/NVIDIA Corporation/Nsight Compute 2026.1.0/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Python310/Scripts/:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Python310/:/mnt/c/Ruby34-x64/bin:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Python313/Scripts/:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Python313/:/mnt/c/Users/tarun/AppData/Local/Programs/Python/Launcher/:/mnt/c/Users/tarun/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/tarun/AppData/Local/GitHubDesktop/bin:/mnt/c/Users/tarun/.dotnet/tools:/mnt/c/Users/tarun/OneDrive/Desktop/Microsoft VS Code/bin:/mnt/c/Users/tarun/AppData/Local/JetBrains/Toolbox/scripts:/mnt/c/Users/tarun/AppData/Roaming/npm:/mnt/c/Users/tarun/AppData/Local/Python/bin:/mnt/c/Users/tarun/.local/bin:/mnt/c/Users/tarun/.local/bin:/mnt/c/Users/tarun/AppData/Local/Programs/DockerDesktop/resources/bin:/snap/bin', 'WT_SESSION': '4112a983-f885-4f5f-9cd5-5943d3239ccb', 'XDG_RUNTIME_DIR': '/run/user/1000/', 'DISPLAY': ':0', 'LANG': 'en_US.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'ROS_DOMAIN_ID': '0', 'AMENT_PREFIX_PATH': '/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'PWD': '/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline', 'XDG_DATA_DIRS': '/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1', 'WSL2_GUI_APPS_ENABLED': '1', 'HOSTTYPE': 'x86_64', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor', 'WSLENV': 'WT_SESSION:WT_PROFILE_ID:'}, 'shell': False}
+[6.612114] (-) TimerEvent: {}
+[6.712501] (-) TimerEvent: {}
+[6.812827] (-) TimerEvent: {}
+[6.913207] (-) TimerEvent: {}
+[6.998816] (mono_perception_pipeline) StdoutLine: {'line': b'running egg_info\n'}
+[6.999583] (mono_perception_pipeline) StdoutLine: {'line': b'creating ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info\n'}
+[7.013388] (-) TimerEvent: {}
+[7.039925] (mono_perception_pipeline) StdoutLine: {'line': b'writing ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/PKG-INFO\n'}
+[7.040431] (mono_perception_pipeline) StdoutLine: {'line': b'writing dependency_links to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/dependency_links.txt\n'}
+[7.041175] (mono_perception_pipeline) StdoutLine: {'line': b'writing requirements to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/requires.txt\n'}
+[7.041518] (mono_perception_pipeline) StdoutLine: {'line': b'writing top-level names to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/top_level.txt\n'}
+[7.041713] (mono_perception_pipeline) StdoutLine: {'line': b"writing manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'\n"}
+[7.088315] (mono_perception_pipeline) StdoutLine: {'line': b"reading manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'\n"}
+[7.089361] (mono_perception_pipeline) StdoutLine: {'line': b"writing manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'\n"}
+[7.089858] (mono_perception_pipeline) StdoutLine: {'line': b'running build\n'}
+[7.090060] (mono_perception_pipeline) StdoutLine: {'line': b'running build_py\n'}
+[7.090141] (mono_perception_pipeline) StdoutLine: {'line': b'creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build\n'}
+[7.101158] (mono_perception_pipeline) StdoutLine: {'line': b'creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib\n'}
+[7.101986] (mono_perception_pipeline) StdoutLine: {'line': b'creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline\n'}
+[7.102388] (mono_perception_pipeline) StdoutLine: {'line': b'copying mono_perception_pipeline/__init__.py -> /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline\n'}
+[7.102787] (mono_perception_pipeline) StdoutLine: {'line': b'running install\n'}
+[7.111161] (mono_perception_pipeline) StdoutLine: {'line': b'running install_lib\n'}
+[7.113465] (-) TimerEvent: {}
+[7.136105] (mono_perception_pipeline) StdoutLine: {'line': b'creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline\n'}
+[7.136597] (mono_perception_pipeline) StdoutLine: {'line': b'copying /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline/__init__.py -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline\n'}
+[7.137363] (mono_perception_pipeline) StdoutLine: {'line': b'byte-compiling /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline/__init__.py to __init__.cpython-312.pyc\n'}
+[7.152259] (mono_perception_pipeline) StdoutLine: {'line': b'running install_data\n'}
+[7.152514] (mono_perception_pipeline) StdoutLine: {'line': b'creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index\n'}
+[7.153400] (mono_perception_pipeline) StdoutLine: {'line': b'creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index\n'}
+[7.154185] (mono_perception_pipeline) StdoutLine: {'line': b'creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index/packages\n'}
+[7.155212] (mono_perception_pipeline) StdoutLine: {'line': b'copying resource/mono_perception_pipeline -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index/packages\n'}
+[7.156114] (mono_perception_pipeline) StdoutLine: {'line': b'copying package.xml -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/mono_perception_pipeline\n'}
+[7.156412] (mono_perception_pipeline) StdoutLine: {'line': b'running install_egg_info\n'}
+[7.185023] (mono_perception_pipeline) StdoutLine: {'line': b'Copying ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info to /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline-0.0.0-py3.12.egg-info\n'}
+[7.187429] (mono_perception_pipeline) StdoutLine: {'line': b'running install_scripts\n'}
+[7.213582] (-) TimerEvent: {}
+[7.314091] (-) TimerEvent: {}
+[7.402056] (mono_perception_pipeline) StdoutLine: {'line': b"writing list of installed files to '/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/install.log'\n"}
+[7.414272] (-) TimerEvent: {}
+[7.446754] (mono_perception_pipeline) CommandEnded: {'returncode': 0}
+[7.514478] (-) TimerEvent: {}
+[7.615960] (-) TimerEvent: {}
+[7.674539] (mono_perception_pipeline) JobEnded: {'identifier': 'mono_perception_pipeline', 'rc': 0}
+[7.676755] (-) EventReactorShutdown: {}

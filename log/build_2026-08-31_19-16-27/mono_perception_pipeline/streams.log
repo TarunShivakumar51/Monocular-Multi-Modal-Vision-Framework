@@ -1,0 +1,32 @@
+[6.536s] Invoking command in '/home/tarun2006/mm_ros2_ws/src/mono_perception_pipeline': PYTHONPATH=/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/mono_perception_pipeline build --build-base /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build install --record /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/install.log --single-version-externally-managed install_data
+[6.997s] running egg_info
+[6.998s] creating ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info
+[7.038s] writing ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/PKG-INFO
+[7.039s] writing dependency_links to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/dependency_links.txt
+[7.039s] writing requirements to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/requires.txt
+[7.039s] writing top-level names to ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/top_level.txt
+[7.040s] writing manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'
+[7.087s] reading manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'
+[7.088s] writing manifest file '../build/mono_perception_pipeline/mono_perception_pipeline.egg-info/SOURCES.txt'
+[7.088s] running build
+[7.088s] running build_py
+[7.088s] creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build
+[7.099s] creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib
+[7.100s] creating /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline
+[7.100s] copying mono_perception_pipeline/__init__.py -> /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline
+[7.101s] running install
+[7.109s] running install_lib
+[7.134s] creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline
+[7.135s] copying /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build/lib/mono_perception_pipeline/__init__.py -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline
+[7.135s] byte-compiling /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline/__init__.py to __init__.cpython-312.pyc
+[7.150s] running install_data
+[7.150s] creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index
+[7.151s] creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index
+[7.152s] creating /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index/packages
+[7.153s] copying resource/mono_perception_pipeline -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/ament_index/resource_index/packages
+[7.154s] copying package.xml -> /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/share/mono_perception_pipeline
+[7.154s] running install_egg_info
+[7.183s] Copying ../build/mono_perception_pipeline/mono_perception_pipeline.egg-info to /home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages/mono_perception_pipeline-0.0.0-py3.12.egg-info
+[7.185s] running install_scripts
+[7.400s] writing list of installed files to '/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/install.log'
+[7.445s] Invoked command in '/home/tarun2006/mm_ros2_ws/src/mono_perception_pipeline' returned '0': PYTHONPATH=/home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/tarun2006/mm_ros2_ws/src/install/mono_perception_pipeline/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/mono_perception_pipeline build --build-base /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/build install --record /home/tarun2006/mm_ros2_ws/src/build/mono_perception_pipeline/install.log --single-version-externally-managed install_data
