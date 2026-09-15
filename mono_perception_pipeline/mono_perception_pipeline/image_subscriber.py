@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from mono_perception_msgs.msg import ImageTriple
 from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped, Transform, Vector3
 from sensor_msgs.msg import PointCloud2, PointField
 from cv_bridge import CvBridge,CvBridgeError
 from optical_flow import compute_optical_flow
@@ -10,6 +10,7 @@ from feature_matching import compute_keypoints
 from triangulation import compute_point_cloud
 import numpy as np
 from scipy.spatial.transform import Rotation
+from tf2_ros import TransformBroadcaster
 
 
 class ImageSubscriber(Node):
@@ -24,8 +25,11 @@ class ImageSubscriber(Node):
 
         self.bridge = CvBridge()
 
+        self.tf_broadcaster = TransformBroadcaster()
+
         self.path_publisher = self.create_publisher(Path, '/camera/path', 10)
         self.pose_publisher = self.create_publisher(PoseStamped, '/camera/pose', 10)
+        self.point_cloud_publisher = self.create_publisher(PointCloud2, '/camera/point_cloud', 10)
 
     def create_path(self, msg: ImageTriple):
         
@@ -102,40 +106,45 @@ class ImageSubscriber(Node):
 
         frame_a_keypoints, frame_b_keypoints = compute_keypoints(image_a, image_b)
         point_cloud_matrix = compute_point_cloud(R1, t1, R2, t2, self.mtx, frame_a_keypoints, frame_b_keypoints)
-        point_cloud_matrix = np.array(point_cloud_matrix, dtype=np.int32)
+        point_cloud_matrix = np.array(point_cloud_matrix, dtype=np.float32)
 
-        point_field = [PointField(name = 'x', offset = 0, datatype = 7, count = 4),
-                       PointField(name = 'y', offset = 3, datatype = 7, count = 4),
-                       PointField(name = 'z', offset = 7, datatype = 7, count = 4)]
+        point_field = [PointField(name = 'x', offset = 0, datatype = 7, count = 1),
+                       PointField(name = 'y', offset = 4, datatype = 7, count = 1),
+                       PointField(name = 'z', offset = 8, datatype = 7, count = 1)]
 
         point_cloud = PointCloud2()
         point_cloud.header = msg.header()
         point_cloud.height = 1
-        point_cloud.width = point_cloud_matrix.width
+        point_cloud.width = point_cloud_matrix.shape[0]
         point_cloud.fields = point_field
         point_cloud.is_bigendian = False
         point_cloud.point_step = 12
-        point_cloud.row_step = 12 * point_cloud_matrix.width
-        point_cloud.data = point_cloud_matrix
+        point_cloud.row_step = 12 * point_cloud_matrix.shape[0]
+        point_cloud.data = point_cloud_matrix.tobytes()
         point_cloud.is_dense = True
 
-        
+        self.point_cloud_publisher.publish(point_cloud)
+
+        transform_stamped = TransformStamped()
+        transform_stamped.header.stamp = self.get_clock().now().to_msg()
+        transform_stamped.header.frame_id = "world"
+        transform_stamped.child_frame_id = "camera"
+
+        transform = Transform()
+
+        vector3 = Vector3()
+        vector3.x = global_translation_matrix[0]
+        vector3.y = global_translation_matrix[1]
+        vector3.z = global_translation_matrix[2]
+
+        transform.translation = vector3
+        transform.rotation = quat
+
+        self.tf_broadcaster.sendTransform(TransformStamped)
 
 
 
 
-
-
-
-            
-
-        
-
-                
-
-
-
-        
 
 def main(args=None):
     rclpy.init(args=args)
