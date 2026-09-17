@@ -80,27 +80,6 @@ class ImageSubscriber(Node):
 
         self.tf_broadcaster.sendTransform(transform_stamped_ab)
 
-        # Pair 2 (image b, c) - pose and path
-        self.t_global = np.add(self.t_global, np.matmul(self.R_global, t2))
-        self.R_global = np.matmul(R2, self.R_global)
-
-        scipy_rotation = Rotation.from_matrix(self.R_global)
-        global_quat_matrix = scipy_rotation.as_quat()
-        global_translation_matrix = self.t_global.flatten()
-
-        pose_bc = Pose()
-        pose_bc.position = Point(x=global_translation_matrix[0], y=global_translation_matrix[1], z=global_translation_matrix[2])
-        pose_bc.orientation = Quaternion(x=global_quat_matrix[0], y=global_quat_matrix[1], z=global_quat_matrix[2], w=global_quat_matrix[3])
-
-        pose_stamped_bc = PoseStamped()
-        pose_stamped_bc.header = msg.header()
-        pose_stamped_bc.pose = pose_bc
-
-        path.poses.append(pose_stamped_bc)
-
-        self.pose_publisher.publish(pose_stamped_bc)
-        self.path_publisher.publish(path)
-
         # Pair 1 (image a, b) - point cloud
         frame_a_keypoints, frame_b_keypoints = compute_keypoints(image_a, image_b)
         point_cloud_matrix = compute_point_cloud(R1, t1, R2, t2, self.mtx, frame_a_keypoints, frame_b_keypoints)
@@ -123,6 +102,40 @@ class ImageSubscriber(Node):
 
         self.point_cloud_publisher.publish(point_cloud)
 
+        # Pair 2 (image b, c) - pose and path
+        self.t_global = np.add(self.t_global, np.matmul(self.R_global, t2))
+        self.R_global = np.matmul(R2, self.R_global)
+
+        scipy_rotation = Rotation.from_matrix(self.R_global)
+        global_quat_matrix = scipy_rotation.as_quat()
+        global_translation_matrix = self.t_global.flatten()
+
+        pose_bc = Pose()
+        pose_bc.position = Point(x=global_translation_matrix[0], y=global_translation_matrix[1], z=global_translation_matrix[2])
+        pose_bc.orientation = Quaternion(x=global_quat_matrix[0], y=global_quat_matrix[1], z=global_quat_matrix[2], w=global_quat_matrix[3])
+
+        pose_stamped_bc = PoseStamped()
+        pose_stamped_bc.header = msg.header()
+        pose_stamped_bc.pose = pose_bc
+
+        path.poses.append(pose_stamped_bc)
+
+        self.pose_publisher.publish(pose_stamped_bc)
+        self.path_publisher.publish(path)
+
+        # Pair 2 (image b, c) - tf broadcast
+        transform_stamped_bc = TransformStamped()
+        transform_stamped_bc.header.stamp = self.get_clock().now().to_msg()
+        transform_stamped_bc.header.frame_id = "world"
+        transform_stamped_bc.child_frame_id = "camera"
+
+        transform_bc = Transform()
+        transform_bc.translation = Vector3(x=global_translation_matrix[0], y=global_translation_matrix[1], z=global_translation_matrix[2])
+        transform_bc.rotation = Quaternion(x=global_quat_matrix[0], y=global_quat_matrix[1], z=global_quat_matrix[2], w=global_quat_matrix[3])
+        transform_stamped_bc.transform = transform_bc
+
+        self.tf_broadcaster.sendTransform(transform_stamped_bc)
+
         # Pair 2 (image b, c) - point cloud
         frame_b_keypoints_bc, frame_c_keypoints = compute_keypoints(image_b, image_c)
         point_cloud_matrix_bc = compute_point_cloud(R1, t1, R2, t2, self.mtx, frame_b_keypoints_bc, frame_c_keypoints)
@@ -140,20 +153,6 @@ class ImageSubscriber(Node):
         point_cloud_bc.is_dense = True
 
         self.point_cloud_publisher.publish(point_cloud_bc)
-
-        # Pair 2 (image b, c) - tf broadcast
-        transform_stamped_bc = TransformStamped()
-        transform_stamped_bc.header.stamp = self.get_clock().now().to_msg()
-        transform_stamped_bc.header.frame_id = "world"
-        transform_stamped_bc.child_frame_id = "camera"
-
-        transform_bc = Transform()
-        transform_bc.translation = Vector3(x=global_translation_matrix[0], y=global_translation_matrix[1], z=global_translation_matrix[2])
-        transform_bc.rotation = Quaternion(x=global_quat_matrix[0], y=global_quat_matrix[1], z=global_quat_matrix[2], w=global_quat_matrix[3])
-        transform_stamped_bc.transform = transform_bc
-
-        self.tf_broadcaster.sendTransform(transform_stamped_bc)
-
 
 def main(args=None):
     rclpy.init(args=args)
