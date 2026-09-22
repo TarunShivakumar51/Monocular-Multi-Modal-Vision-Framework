@@ -15,6 +15,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'),
             glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'rviz'),
+            glob('rviz/*.rviz')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -30,6 +32,7 @@ setup(
     entry_points={
         'console_scripts': [
             'image_publisher = mono_perception_pipeline.image_publisher:main',
+            'image_subscriber = mono_perception_pipeline.image_subscriber:main',
         ],
     },
 )
