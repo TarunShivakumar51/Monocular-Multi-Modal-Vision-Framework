@@ -1,621 +1,655 @@
-# ROS2-Based-6-DOF
+# Monocular Multi-Modal Vision Framework
 
-A ROS 2 computer-vision pipeline for estimating the **6-DOF pose of a planar reference object** from a camera image.
+A ROS 2-based **monocular visual perception pipeline** for estimating camera motion and generating sparse 3D structure from image sequences.
 
-The project combines:
+The framework combines multiple visual-processing techniques:
 
-- **ROS 2** for image transport and pose publishing
-- **OpenCV SIFT** for feature detection and matching
-- **RANSAC homography estimation** for locating the reference object in the scene
-- **Perspective geometry + `solvePnPRansac`** for 3D pose estimation
-- **YOLO** for object detection / confidence filtering
-- **Quaternion conversion** for representing orientation
-- **TF2** for broadcasting the estimated camera transform
-- **RViz-compatible ROS messages** for visualization and downstream robotics applications
+- **Lucas-Kanade optical flow** for frame-to-frame feature tracking
+- **Essential matrix estimation + RANSAC** for relative camera motion
+- **SIFT feature matching** for robust feature correspondences
+- **Stereo-style triangulation from consecutive monocular views** to recover 3D points
+- **ROS 2 custom messages** for bundling consecutive image frames
+- **TF2** for publishing camera motion
+- **`nav_msgs/Path` and `PoseStamped`** for camera trajectory visualization
+- **`sensor_msgs/PointCloud2`** for publishing reconstructed 3D points
+- **Blur-aware frame sampling** to prepare video data for visual odometry / SfM
 
-The resulting pose contains **three position components** and **three rotational degrees of freedom**, giving a full 6-DOF camera/object pose estimate.
+Despite the repository name containing "multi-modal," the current implementation is primarily **multi-method monocular vision**: multiple computer-vision techniques are applied to the same camera stream rather than combining physical sensors such as LiDAR, IMU, or stereo cameras.
 
 ---
 
 ## Overview
 
-The system starts with an image or video stream and attempts to determine where a known planar object is located relative to the camera.
-
-The core pipeline is:
+The system takes a sequence of images from a single camera and processes overlapping groups of three frames.
 
 ```text
-Reference Image + Scene Image
-              │
-              ▼
-        SIFT Feature Detection
-              │
-              ▼
-        SIFT Feature Matching
-              │
-              ▼
-          Ratio Test
-              │
-              ▼
-      RANSAC Homography
-              │
-              ▼
-   Project Reference Corners
-              │
-              ▼
-        solvePnPRansac
-              │
-              ▼
-       Rotation + Translation
-              │
-              ▼
-        Quaternion Pose
-              │
-              ▼
-             ROS 2
-        ┌─────┼──────┐
-        ▼     ▼      ▼
-   Detection3D  Pose  TF
-      Array    Msg   Transform
-```
-
-The project is designed as a perception component that could be integrated into a larger robotics system where the camera needs to estimate its position and orientation relative to a known planar target.
-
----
-
-# 🎯 What Is 6-DOF Pose?
-
-A 6-DOF pose describes both the **position** and **orientation** of an object.
-
-### Position — 3 DOF
-
-```text
-X → left / right
-Y → up / down
-Z → forward / backward
-```
-
-### Orientation — 3 DOF
-
-```text
-Roll  → rotation around X
-Pitch → rotation around Y
-Yaw   → rotation around Z
-```
-
-Together:
-
-```text
-6 DOF = 3 position + 3 orientation
-```
-
-The project estimates the translation vector:
-
-```text
-t = [x, y, z]
-```
-
-and the rotation vector:
-
-```text
-r = [rx, ry, rz]
-```
-
-The rotation vector is then converted into a quaternion before being published through ROS 2.
-
----
-
-# 🧠 How the Pose Estimation Works
-
-## 1. Reference Image
-
-The system uses a known reference image:
-
-```text
-Scene.png
-```
-
-This image represents the planar target whose pose should be estimated.
-
-The reference image is converted to grayscale before feature extraction.
-
----
-
-## 2. SIFT Feature Detection
-
-The system uses OpenCV's SIFT implementation:
-
-```python
-sift = cv2.SIFT_create()
-```
-
-SIFT detects distinctive keypoints and computes descriptors for both:
-
-- the reference image
-- the current camera frame
-
-Conceptually:
-
-```text
-Reference Image                Scene Image
-      │                              │
-      ▼                              ▼
- SIFT Keypoints                  SIFT Keypoints
-      │                              │
-      ▼                              ▼
-  Descriptors                    Descriptors
-```
-
-SIFT is useful here because the reference object may appear at different positions, scales, and orientations in the camera image.
-
----
-
-## 3. Feature Matching
-
-The project uses a brute-force matcher with the L2 distance:
-
-```python
-bf = cv2.BFMatcher(cv2.NORM_L2)
-```
-
-The descriptors are matched using:
-
-```python
-matches = bf.knnMatch(
-    descriptorsRef,
-    descriptorsScene,
-    k=2
-)
-```
-
-For each descriptor, the two nearest matches are obtained.
-
----
-
-## 4. Lowe's Ratio Test
-
-The project applies a ratio test to remove weak or ambiguous matches:
-
-```python
-goodMatches = [
-    m for m, n in matches
-    if m.distance < 0.75 * n.distance
-]
-```
-
-This means a match is accepted only when the best match is sufficiently better than the second-best match.
-
-At least four good matches are required:
-
-```python
-if len(goodMatches) < 4:
-    return "Error: Not enough matches to compute homography.", None
-```
-
-Four point correspondences are the minimum needed to estimate a planar homography.
-
----
-
-# 🔄 5. Homography Estimation
-
-The coordinates of the matched keypoints are extracted from both images.
-
-The project then computes a homography using RANSAC:
-
-```python
-M, mask = cv2.findHomography(
-    ptsRef,
-    ptsScene,
-    cv2.RANSAC,
-    5.0
-)
-```
-
-The homography maps points from the reference-image plane into the corresponding locations in the scene image.
-
-Conceptually:
-
-```text
-Reference Plane
-      │
-      │ Homography
-      ▼
-Camera Image
-```
-
-RANSAC helps reject incorrect feature matches, which is important because SIFT matching can contain outliers.
-
----
-
-# 📐 6. Projecting the Reference Corners
-
-Once the homography is known, the four corners of the reference image are projected into the scene.
-
-```python
-projected_points = cv2.perspectiveTransform(
-    pts,
-    M
-)
-```
-
-This gives four 2D image coordinates corresponding to the corners of the known planar target.
-
-The project therefore obtains:
-
-```text
-Reference Image Coordinates
-          ↓
-      Homography
-          ↓
-Scene Image Corner Coordinates
+Input Video
+    │
+    ▼
+Frame Sampling
+    │
+    ├── Sample every Nth frame
+    └── Remove blurry frames
+    │
+    ▼
+Frame Sequence
+    │
+    ▼
+Overlapping Image Triples
+(1,2,3), (3,4,5), (5,6,7), ...
+    │
+    ▼
+ROS 2 ImageTriple Message
+    │
+    ▼
+┌─────────────────────────────────────┐
+│        Monocular Perception         │
+│                                     │
+│  Frame A ──► Frame B ──► Frame C    │
+│      │           │           │       │
+│      ▼           ▼           ▼       │
+│ Optical Flow / Essential Matrix     │
+│      │           │                   │
+│      ▼           ▼                   │
+│ Relative R + t                       │
+│                                      │
+│ SIFT Feature Matching                │
+│      │           │                   │
+│      ▼           ▼                   │
+│ Matched 2D Features                 │
+│                                      │
+│ Triangulation                        │
+│      │                               │
+│      ▼                               │
+│ Sparse 3D Point Cloud                │
+└─────────────────────────────────────┘
+    │
+    ├── Camera Pose
+    ├── Camera Path
+    ├── TF Transform
+    └── 3D Point Cloud
 ```
 
 ---
 
-# 📏 7. Defining the 3D Target
+# 🎯 Project Goal
 
-The target is modeled as a square planar object with a side length of:
+The goal of the framework is to build a lightweight monocular perception pipeline capable of estimating:
 
-```text
-0.6096 m
-```
+1. **Relative camera rotation**
+2. **Relative camera translation**
+3. **Accumulated camera trajectory**
+4. **Sparse 3D structure from tracked/matched image features**
 
-The four 3D points are:
-
-```python
-posterPoints3D = np.array([
-    [0,      0,      0],
-    [0.6096, 0,      0],
-    [0.6096, 0.6096, 0],
-    [0,      0.6096,  0]
-], dtype=np.float32)
-```
-
-Because all four points lie on the same plane:
-
-```text
-Z = 0
-```
-
-The known physical dimensions allow the system to recover metric translation rather than only estimating a relative image transformation.
+The project is structured as a ROS 2 package so that the estimated pose and point cloud can be consumed by other robotics components.
 
 ---
 
-# 📷 8. Camera Calibration
+# 🧠 Core Concepts
 
-Pose estimation requires camera intrinsics and lens distortion parameters.
+## Monocular Visual Odometry
 
-The project currently uses:
+Visual odometry estimates how a camera moves by analyzing changes between consecutive images.
+
+Given:
+
+```text
+Image A → Image B
+```
+
+the system attempts to estimate:
+
+```text
+R = rotation
+t = translation
+```
+
+The process is repeated over time:
+
+```text
+Frame 1 → Frame 2 → Frame 3 → Frame 4 → ...
+     │          │          │
+     ▼          ▼          ▼
+   Motion     Motion     Motion
+```
+
+The individual relative motions can then be accumulated to estimate a camera trajectory.
+
+---
+
+# 🔍 Optical Flow
+
+The project uses OpenCV's Lucas-Kanade optical flow implementation.
+
+Feature points are first detected with:
 
 ```python
-camera_mtx = np.array([
-    [4.2854390e+03, 0.0000000e+00, 2.8507354e+03],
-    [0.0000000e+00, 4.2845395e+03, 2.1335531e+03],
-    [0.0000000e+00, 0.0000000e+00, 1.0000000e+00]
-])
+cv.goodFeaturesToTrack(...)
+```
+
+The Lucas-Kanade tracker then attempts to locate those same points in the next frame:
+
+```python
+cv.calcOpticalFlowPyrLK(...)
+```
+
+The implementation uses:
+
+```python
+feature_params = {
+    "maxCorners": 100,
+    "qualityLevel": 0.3,
+    "minDistance": 7,
+    "blockSize": 7
+}
 ```
 
 and:
 
 ```python
-camera_dist = np.array([
-    3.0210000e-01,
-    -1.1210000e+00,
-    0.0000000e+00,
-    0.0000000e+00,
-    0.0000000e+00
-])
+lk_params = {
+    "winSize": (15, 15),
+    "maxLevel": 2,
+    "criteria": (
+        cv.TERM_CRITERIA_EPS |
+        cv.TERM_CRITERIA_COUNT,
+        10,
+        0.03
+    )
+}
 ```
 
-These values are specific to the camera calibration used during development.
-
-**They should be replaced with calibration values from the camera actually being used.**
-
----
-
-# 🧮 9. PnP Pose Estimation
-
-The projected 2D points and known 3D points are passed into:
-
-```python
-cv2.solvePnPRansac(...)
-```
-
-using:
-
-```python
-cv2.SOLVEPNP_IPPE_SQUARE
-```
-
-This estimates:
+The result is a set of corresponding points:
 
 ```text
-rvec → rotation
-tvec → translation
+Frame 1                    Frame 2
+
+  •                          •
+     •                    •
+          •              •
+   •                          •
+        •                  •
+
+       matched feature locations
 ```
-
-The rotation and translation describe the camera/object relationship.
-
-The translation vector is also used to calculate the Euclidean distance:
-
-```python
-distance_m = np.linalg.norm(tvec)
-```
-
-The pose is subsequently refined using:
-
-```python
-cv2.solvePnPRefineVVS(...)
-```
-
-This provides a refinement step after the initial PnP solution.
 
 ---
 
-# 🔢 10. Quaternion Conversion
+# 📐 Essential Matrix
 
-ROS 2 commonly represents orientation using quaternions.
-
-The estimated rotation vector is converted using:
+After tracking features between two frames, the project estimates the essential matrix:
 
 ```python
-q = quat.from_rotation_vector(
-    self.rvec.flatten()
+E, _ = cv.findEssentialMat(
+    good_old,
+    good_new,
+    None,
+    method=cv.RANSAC,
+    prob=0.999,
+    threshold=1.0
 )
 ```
 
-The quaternion components are then extracted and placed into ROS messages:
+RANSAC is used to reduce the effect of incorrect feature correspondences.
 
-```text
-w
-x
-y
-z
-```
+The essential matrix encodes the epipolar geometry between the two camera views.
 
-This allows the estimated orientation to be published through ROS 2.
-
----
-
-# 🤖 ROS 2 Architecture
-
-The project contains two ROS 2 nodes:
-
-```text
-image_publisher.py
-        │
-        │ /camera/image_raw
-        ▼
-image_subscriber.py
-        │
-        ├── YOLO
-        ├── SIFT
-        ├── Homography
-        ├── PnP
-        └── Pose
-             │
-             ├── /detections_3d
-             ├── /pose_stamped
-             ├── /pose_maker
-             ├── /camera_info
-             └── TF: poster → camera
-```
-
----
-
-# 📡 `image_publisher.py`
-
-`image_publisher.py` creates a ROS 2 node named:
-
-```text
-pose_publisher
-```
-
-It publishes images to:
-
-```text
-/camera/image_raw
-```
-
-The video is read using OpenCV:
+The relative camera pose is then recovered using:
 
 ```python
-cv2.VideoCapture(video_path)
-```
-
-A timer runs every:
-
-```text
-0.1 seconds
-```
-
-which corresponds to approximately:
-
-```text
-10 Hz
-```
-
-Each frame is converted to a ROS 2 `sensor_msgs/Image` using `CvBridge`.
-
-If the video reaches the end, the publisher resets the video position back to the first frame and continues looping.
-
-### Published Topic
-
-```text
-/camera/image_raw
-```
-
-Message type:
-
-```text
-sensor_msgs/msg/Image
-```
-
----
-
-# 📥 `image_subscriber.py`
-
-`image_subscriber.py` creates a ROS 2 node named:
-
-```text
-pose_subscriber
-```
-
-It subscribes to:
-
-```text
-/camera/image_raw
-```
-
-For every received image, it:
-
-1. Converts the ROS image into an OpenCV image
-2. Runs the YOLO model
-3. Estimates the planar target pose
-4. Selects the highest-confidence YOLO detection
-5. Rejects detections below a confidence threshold
-6. Converts the pose orientation into a quaternion
-7. Publishes ROS pose messages
-8. Publishes a visualization marker
-9. Broadcasts a TF transform
-10. Publishes camera calibration information
-
----
-
-# 🧠 YOLO Integration
-
-The subscriber loads a YOLO model from the ROS package share directory:
-
-```python
-model_path = os.path.join(
-    get_package_share_directory('perception_projects'),
-    'rs25_8_15_2.pt'
-)
-
-self.model = YOLO(model_path)
-```
-
-The model is run with:
-
-```python
-results = self.model.predict(
-    scene_img,
-    save=True,
-    imgsz=320,
-    conf=0.25
+_, R, t, _ = cv.recoverPose(
+    E,
+    good_old,
+    good_new,
+    None
 )
 ```
 
-The system then searches for the highest-confidence detection.
+The result is:
 
-A second confidence threshold is applied:
+```text
+R → relative rotation
+t → relative translation direction
+```
+
+### Important monocular limitation
+
+For a monocular camera, the translation recovered from the essential matrix has an inherent **scale ambiguity**.
+
+In other words, the system can estimate the direction and relative magnitude of camera motion, but it does not automatically know the real-world distance traveled without an external scale reference.
+
+This is a fundamental limitation of monocular visual odometry.
+
+---
+
+# 🔗 Pose Accumulation
+
+The ROS 2 subscriber maintains:
 
 ```python
-threshold = 0.9
+self.R_global = np.eye(3)
+self.t_global = np.zeros((3, 1))
 ```
 
-Therefore, the node only continues publishing the pose when the best detection has a confidence of at least:
+For each new relative motion, the translation is transformed into the accumulated coordinate frame:
 
-```text
-0.90
+```python
+self.t_global = np.add(
+    self.t_global,
+    np.matmul(self.R_global, t)
+)
 ```
 
-The YOLO result is used as a confidence gate while the geometric pose estimation is performed by the SIFT/homography/PnP pipeline.
+The global rotation is updated using:
 
----
-
-# 📤 ROS 2 Outputs
-
-## `/detections_3d`
-
-Message type:
-
-```text
-vision_msgs/msg/Detection3DArray
-```
-
-The estimated translation and orientation are stored in the detection's pose.
-
-The message includes:
-
-```text
-Position:
-    x
-    y
-    z
-
-Orientation:
-    x
-    y
-    z
-    w
-```
-
-The detected object's class name and YOLO confidence are also included.
-
----
-
-## `/pose_stamped`
-
-Message type:
-
-```text
-geometry_msgs/msg/PoseStamped
-```
-
-The estimated position and orientation are published as a standard ROS pose.
-
-The current frame ID is:
-
-```text
-poster
-```
-
----
-
-## `/pose_maker`
-
-Message type:
-
-```text
-visualization_msgs/msg/Marker
-```
-
-The node publishes an arrow marker that can be visualized in RViz.
-
-The marker is useful for visualizing the estimated pose and orientation.
-
----
-
-## `/camera_info`
-
-Message type:
-
-```text
-sensor_msgs/msg/CameraInfo
-```
-
-The node publishes the camera calibration parameters used by the pose-estimation pipeline.
-
----
-
-# 🔗 TF Broadcast
-
-The subscriber also broadcasts a transform:
-
-```text
-parent frame:
-poster
-
-child frame:
-camera
+```python
+self.R_global = np.matmul(
+    R,
+    self.R_global
+)
 ```
 
 Conceptually:
 
 ```text
-poster
+Relative Motion 1
+      ↓
+Global Pose 1
+      ↓
+Relative Motion 2
+      ↓
+Global Pose 2
+      ↓
+Relative Motion 3
+      ↓
+Global Pose 3
+```
+
+The accumulated pose is then converted into a quaternion for ROS 2.
+
+---
+
+# 🧩 SIFT Feature Matching
+
+The project also implements a separate feature-matching pipeline using SIFT.
+
+SIFT is initialized with:
+
+```python
+sift = cv.SIFT_create()
+```
+
+Descriptors are extracted from both frames:
+
+```python
+kp1, des1 = sift.detectAndCompute(gray1, None)
+kp2, des2 = sift.detectAndCompute(gray2, None)
+```
+
+A brute-force matcher is then used:
+
+```python
+bf = cv.BFMatcher()
+```
+
+The two nearest matches are found using:
+
+```python
+bf.knnMatch(des1, des2, k=2)
+```
+
+---
+
+# ✅ Lowe Ratio Test
+
+Incorrect or ambiguous SIFT matches are filtered using the ratio test:
+
+```python
+good = [
+    m for m, n in matches
+    if m.distance < 0.75 * n.distance
+]
+```
+
+This keeps a match when the best descriptor match is significantly better than the second-best candidate.
+
+The remaining feature locations are returned as:
+
+```text
+points1
+points2
+```
+
+These matched 2D coordinates are used for 3D reconstruction.
+
+---
+
+# 🌐 Triangulation
+
+The project reconstructs 3D points from corresponding observations in two camera frames.
+
+Projection matrices are constructed as:
+
+```python
+P1 = K [R1 | t1]
+P2 = K [R2 | t2]
+```
+
+where:
+
+```text
+K  = camera intrinsic matrix
+R  = camera rotation
+t  = camera translation
+```
+
+OpenCV's triangulation function is then used:
+
+```python
+cv.triangulatePoints(
+    proj_matrix1,
+    proj_matrix2,
+    points1,
+    points2
+)
+```
+
+The resulting homogeneous coordinates are converted into 3D coordinates:
+
+```python
+points3D = points4D[:3, :] / points4D[3, :]
+```
+
+The final result is a sparse point cloud:
+
+```text
+        •
+   •         •
+       •
+ •             •
+          •
+```
+
+These points are published as a ROS 2 `PointCloud2` message.
+
+---
+
+# 📸 Frame Sampling
+
+Before running the ROS 2 pipeline, the repository includes a preprocessing tool:
+
+```text
+sample_frames.py
+```
+
+It extracts useful frames from a video and removes blurry frames.
+
+This is particularly useful for:
+
+- Visual odometry
+- Structure-from-motion
+- COLMAP preprocessing
+- Reducing redundant frames
+- Removing motion-blurred images
+
+---
+
+## Sampling Interval
+
+The script can keep every Nth frame:
+
+```bash
+python sample_frames.py input.mov frames --interval 5
+```
+
+For example:
+
+```text
+Original video:
+
+1 2 3 4 5 6 7 8 9 10 ...
+
+interval = 5
+
+↓
+1 6 11 16 ...
+```
+
+---
+
+# 🔬 Blur Detection
+
+The project uses the **variance of the Laplacian** as a sharpness metric.
+
+```python
+gray = cv2.cvtColor(
+    frame,
+    cv2.COLOR_BGR2GRAY
+)
+
+score = cv2.Laplacian(
+    gray,
+    cv2.CV_64F
+).var()
+```
+
+Higher values generally correspond to sharper images.
+
+Low values can indicate:
+
+- Motion blur
+- Defocus
+- Poor image quality
+
+Frames below the configured threshold are discarded.
+
+The default threshold is:
+
+```text
+100.0
+```
+
+---
+
+# 🖼️ Output Frame Naming
+
+Surviving frames are written sequentially:
+
+```text
+frame_0000.jpg
+frame_0001.jpg
+frame_0002.jpg
+...
+```
+
+This ensures alphabetical ordering matches chronological ordering.
+
+---
+
+# 🔗 ROS 2 Architecture
+
+The repository contains two ROS 2 packages:
+
+```text
+mono_perception_msgs
+        │
+        │ custom ImageTriple message
+        ▼
+mono_perception_pipeline
+        │
+        ├── image_publisher
+        │
+        └── image_subscriber
+```
+
+---
+
+# 📦 `mono_perception_msgs`
+
+This package defines the custom:
+
+```text
+ImageTriple
+```
+
+message.
+
+The message contains:
+
+```text
+std_msgs/Header header
+
+uint32 triple_index
+
+sensor_msgs/Image image_a
+sensor_msgs/Image image_b
+sensor_msgs/Image image_c
+
+string image_a_name
+string image_b_name
+string image_c_name
+```
+
+The purpose is to bundle three consecutive frames into a single ROS message.
+
+---
+
+# 🔄 Why Three Frames?
+
+The publisher creates overlapping triples:
+
+```text
+(1, 2, 3)
+(3, 4, 5)
+(5, 6, 7)
+(7, 8, 9)
+...
+```
+
+Notice that each triple overlaps with the next one by one frame.
+
+This allows the downstream node to process a short temporal window while avoiding independently timed image topics.
+
+---
+
+# 📡 `image_publisher`
+
+The `image_publisher` node:
+
+1. Reads images from a folder
+2. Sorts them naturally
+3. Groups them into overlapping triples
+4. Converts them into ROS `Image` messages
+5. Publishes `ImageTriple`
+6. Stops automatically after the final triple
+
+Default publish rate:
+
+```text
+2.0 triples / second
+```
+
+Default topic:
+
+```text
+/image_triples
+```
+
+Default frame ID:
+
+```text
+camera
+```
+
+The input directory is provided as a ROS parameter.
+
+---
+
+# 📥 `image_subscriber`
+
+The `image_subscriber` node subscribes to:
+
+```text
+/image_triples
+```
+
+and performs the main perception processing.
+
+For each `ImageTriple`, it:
+
+1. Converts ROS images to OpenCV images
+2. Computes optical flow for A → B
+3. Computes optical flow for B → C
+4. Estimates relative camera motion
+5. Accumulates camera pose
+6. Converts rotation matrices to quaternions
+7. Publishes camera poses
+8. Broadcasts TF transforms
+9. Performs SIFT feature matching
+10. Triangulates 3D points
+11. Publishes a point cloud
+
+---
+
+# 📤 ROS 2 Topics
+
+## `/image_triples`
+
+Message:
+
+```text
+mono_perception_msgs/msg/ImageTriple
+```
+
+Contains three overlapping consecutive frames.
+
+---
+
+## `/camera/pose`
+
+Message:
+
+```text
+geometry_msgs/msg/PoseStamped
+```
+
+Contains the accumulated camera position and orientation.
+
+---
+
+## `/camera/path`
+
+Message:
+
+```text
+nav_msgs/msg/Path
+```
+
+Contains the estimated camera trajectory.
+
+This can be visualized in RViz.
+
+---
+
+## `/camera/point_cloud`
+
+Message:
+
+```text
+sensor_msgs/msg/PointCloud2
+```
+
+Contains the reconstructed 3D feature points.
+
+---
+
+# 🌍 TF
+
+The subscriber broadcasts a transform:
+
+```text
+world
   │
-  │ estimated transform
   ▼
 camera
 ```
@@ -629,206 +663,224 @@ Translation:
     z
 
 Rotation:
-    quaternion
+    x
+    y
+    z
+    w
 ```
 
-This makes the pose available to other ROS 2 components through the TF2 system.
+This makes the estimated camera pose available through the ROS 2 TF system.
 
 ---
 
 # 📁 Repository Structure
 
-The repository currently contains three Python modules:
-
 ```text
-ROS2-Based-6-DOF/
+Monocular-Multi-Modal-Vision-Framework/
 │
-├── image_publisher.py
-├── image_subscriber.py
-└── pose_estimation_v2.py
+├── mono_perception_msgs/
+│   ├── CMakeLists.txt
+│   ├── package.xml
+│   └── msg/
+│       └── ImageTriple.msg
+│
+├── mono_perception_pipeline/
+│   ├── package.xml
+│   ├── setup.py
+│   ├── setup.cfg
+│   │
+│   ├── launch/
+│   │   └── image_publisher.launch.py
+│   │
+│   ├── mono_perception_pipeline/
+│   │   ├── image_publisher.py
+│   │   ├── image_subscriber.py
+│   │   ├── optical_flow.py
+│   │   ├── feature_matching.py
+│   │   ├── triangulation.py
+│   │   └── sample_frames.py
+│   │
+│   └── test/
+│
+├── build/
+├── install/
+├── log/
+└── README.md
 ```
 
-## `image_publisher.py`
+The repository also contains generated ROS 2 `build/`, `install/`, and `log/` directories from previous builds. These are generally not required in source control and can be regenerated with `colcon build`.
 
-Reads a video with OpenCV and publishes frames to:
+---
 
-```text
-/camera/image_raw
-```
+# 🛠️ Installation
 
-as ROS 2 image messages.
+## Requirements
 
-## `image_subscriber.py`
+The project requires:
 
-Main ROS 2 perception node.
-
-It combines:
-
-- ROS 2 subscriptions/publications
+- ROS 2
+- Python 3
 - OpenCV
-- YOLO
-- SIFT-based pose estimation
-- PnP
-- quaternion conversion
-- TF2
-- RViz visualization
+- NumPy
+- SciPy
+- `cv_bridge`
+- ROS 2 message packages
+- `tf2_ros`
+- `colcon`
 
-## `pose_estimation_v2.py`
-
-Contains the main geometric pose-estimation function:
-
-```python
-estimate_pose(ref_path, scene_img)
-```
-
-The function returns either an error or a dictionary containing:
-
-```text
-rvec
-tvec
-homography
-distance_m
-```
+The package is configured as an `ament_python` package.
 
 ---
 
-# ⚙️ Dependencies
+## 1. Create a ROS 2 Workspace
 
-The project uses the following major Python libraries:
-
-```text
-rclpy
-opencv-python
-cv_bridge
-numpy
-scipy / quaternion
-ultralytics
-vision_msgs
-geometry_msgs
-sensor_msgs
-visualization_msgs
-tf2_ros
-ament_index_python
-```
-
-A ROS 2 installation is also required.
-
-The code uses standard ROS 2 message packages including:
-
-```text
-sensor_msgs
-vision_msgs
-geometry_msgs
-visualization_msgs
-```
-
----
-
-# 🛠️ Setup
-
-## 1. Install ROS 2
-
-Install a ROS 2 distribution compatible with the system on which you intend to run the project.
-
-Then source ROS 2:
+If you do not already have a workspace:
 
 ```bash
-source /opt/ros/<your_ros_distro>/setup.bash
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
 ```
 
-Replace `<your_ros_distro>` with your installed distribution.
+Clone or copy the repository into the `src` directory.
+
+The source tree should ultimately look approximately like:
+
+```text
+~/ros2_ws/src/
+├── mono_perception_msgs/
+└── mono_perception_pipeline/
+```
 
 ---
 
-## 2. Install Python Dependencies
+## 2. Install ROS Dependencies
 
-Install the Python packages used by the project.
-
-For example:
+From the workspace:
 
 ```bash
-pip install opencv-python numpy ultralytics numpy-quaternion
+cd ~/ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
 ```
 
-ROS-specific packages should be installed through the ROS package manager for your distribution when appropriate.
+This installs available ROS package dependencies.
+
+You may also need the Python packages used directly by the vision modules:
+
+```bash
+pip install numpy scipy opencv-python
+```
+
+On ROS systems, using the distribution-provided OpenCV packages can be preferable to mixing system ROS Python packages with pip packages.
 
 ---
 
-## 3. Configure File Paths
+# 🔨 Build
 
-The current code contains development-machine-specific absolute paths.
+From the workspace root:
 
-For example, `image_publisher.py` contains a video path similar to:
-
-```text
-/home/tarun2006/ros2_ws/src/perception_projects/perception_projects/Eren.MOV
+```bash
+cd ~/ros2_ws
+colcon build
 ```
 
-The subscriber also references:
+After building:
 
-```text
-/home/tarun2006/ros2_ws/src/perception_projects/perception_projects/Scene.png
+```bash
+source install/setup.bash
 ```
 
-These paths **must be changed** for another machine.
+For convenience:
 
-The YOLO model is loaded using:
-
-```python
-get_package_share_directory('perception_projects')
+```bash
+source ~/ros2_ws/install/setup.bash
 ```
-
-so the model must exist in the corresponding package share directory.
 
 ---
 
 # ▶️ Running the Pipeline
 
-Because the repository currently contains the Python nodes but does not include a complete ROS 2 package structure (`package.xml`, `setup.py`, launch files, etc.), the scripts need to be placed into an appropriate ROS 2 Python package before using standard `ros2 run` commands.
+## Step 1 — Prepare Frames
 
-Once the scripts are part of a ROS 2 package, the general workflow is:
+Use the frame sampler to convert a video into a clean image sequence.
 
-### Terminal 1 — Start the image publisher
-
-```bash
-ros2 run <package_name> image_publisher
-```
-
-### Terminal 2 — Start the pose subscriber
+For example:
 
 ```bash
-ros2 run <package_name> image_subscriber
+python3 sample_frames.py input.mov frames
 ```
 
-### Terminal 3 — Inspect topics
+Or specify the sampling interval and blur threshold:
 
 ```bash
-ros2 topic list
+python3 sample_frames.py input.mov frames \
+    --interval 5 \
+    --blur-threshold 100
 ```
 
-You should see topics including:
+---
+
+## Step 2 — Launch the Image Publisher
+
+The repository includes:
 
 ```text
-/camera/image_raw
-/detections_3d
-/pose_stamped
-/pose_maker
-/camera_info
+image_publisher.launch.py
 ```
 
-You can inspect the pose:
+Run:
 
 ```bash
-ros2 topic echo /pose_stamped
+ros2 launch mono_perception_pipeline image_publisher.launch.py \
+    input_folder:=/path/to/frames
+```
+
+You can also configure the publish rate:
+
+```bash
+ros2 launch mono_perception_pipeline image_publisher.launch.py \
+    input_folder:=/path/to/frames \
+    publish_rate_hz:=2.0
+```
+
+The launch file supports:
+
+```text
+input_folder
+publish_rate_hz
+topic_name
+frame_id
+```
+
+---
+
+## Step 3 — Start the Perception Node
+
+In another terminal:
+
+```bash
+source ~/ros2_ws/install/setup.bash
+ros2 run mono_perception_pipeline image_subscriber
+```
+
+The node subscribes to:
+
+```text
+/image_triples
+```
+
+and publishes:
+
+```text
+/camera/pose
+/camera/path
+/camera/point_cloud
 ```
 
 ---
 
 # 👁️ RViz Visualization
 
-RViz can be used to visualize the ROS 2 outputs.
-
-Start RViz with:
+Start RViz:
 
 ```bash
 rviz2
@@ -838,154 +890,260 @@ Useful displays include:
 
 ```text
 TF
-Marker
-Pose
-Image
+Path
+PointCloud2
 ```
 
-The TF tree should contain the relationship:
+Set the RViz fixed frame to:
 
 ```text
-poster → camera
+world
 ```
 
-The marker published on:
+Then add:
 
 ```text
-/pose_maker
+/camera/path
+/camera/point_cloud
 ```
 
-can be used to visualize the estimated orientation.
+This allows the estimated camera trajectory and reconstructed 3D structure to be inspected visually.
 
 ---
 
-# 📐 Coordinate Frames
+# 🔎 Inspecting ROS Topics
 
-The project currently uses the following conceptual frames:
+List active topics:
 
-```text
-poster
-  │
-  └── camera
+```bash
+ros2 topic list
 ```
 
-The planar target is treated as the reference coordinate system.
+Inspect the camera pose:
 
-The target plane is defined using:
-
-```text
-Z = 0
+```bash
+ros2 topic echo /camera/pose
 ```
 
-for all four reference points.
+Inspect the path:
 
-The estimated camera pose is represented relative to this coordinate system.
+```bash
+ros2 topic echo /camera/path
+```
 
-When integrating this pipeline into a larger robotics system, the frame conventions should be explicitly verified because changing parent/child frame definitions can change the interpretation of the reported translation and rotation.
+Inspect TF:
 
----
+```bash
+ros2 run tf2_tools view_frames
+```
 
-# 🔬 Technical Summary
+Inspect the point cloud:
 
-The project combines multiple perception techniques rather than relying on a single computer-vision algorithm.
-
-### Object detection
-
-YOLO provides a confidence-gated detection of the target.
-
-### Feature-based localization
-
-SIFT identifies visual features that can be matched between the reference and current images.
-
-### Geometric estimation
-
-A RANSAC homography determines how the planar reference image maps into the current camera image.
-
-### Metric pose estimation
-
-Known 3D coordinates of the planar target are combined with projected 2D image points and camera calibration through PnP.
-
-### Robotics integration
-
-The resulting pose is converted into ROS-compatible messages and TF transforms.
-
-This creates an end-to-end perception pipeline:
-
-```text
-Visual Features
-      ↓
-2D Correspondences
-      ↓
-Planar Geometry
-      ↓
-3D Camera Pose
-      ↓
-ROS 2 Pose
-      ↓
-TF / RViz / Robotics Stack
+```bash
+ros2 topic info /camera/point_cloud
 ```
 
 ---
 
-# ⚠️ Current Limitations
+# 🧮 Important Monocular Geometry Considerations
 
-This repository represents a research/prototype implementation and contains several pieces that should be improved before treating it as a reusable ROS 2 package.
+## Scale Ambiguity
 
-### Hard-coded paths
+The most important limitation of monocular visual odometry is scale.
 
-The video and reference-image paths are currently absolute paths tied to the original development environment.
-
-These should be replaced with:
-
-- ROS parameters
-- launch-file arguments
-- package-share paths
-- environment variables
-- command-line arguments
-
-### Camera calibration
-
-The calibration values in the code are specific to the camera used during development.
-
-The code itself contains a comment indicating that some values are not final.
-
-A proper deployment should use calibration parameters obtained from the actual camera.
-
-### ROS 2 package structure
-
-The repository currently does not contain the standard ROS 2 package files such as:
+From two monocular images, the essential matrix can recover:
 
 ```text
-package.xml
-setup.py
-setup.cfg
-resource/
-launch/
+Rotation
+Translation direction
 ```
 
-Adding these would make the project easier to build and run with `colcon`.
+but not absolute metric translation by itself.
 
-### Pose accuracy
+For example, these two trajectories may produce the same image geometry:
 
-The final translation estimate depends heavily on:
+```text
+Camera moves 1 meter
+Camera moves 10 meters
+```
 
-- camera calibration
-- reference-object dimensions
-- feature matching quality
-- homography accuracy
-- target visibility
-- image resolution
-- camera viewpoint
+if the scene is scaled accordingly.
 
-Poor calibration or inaccurate reference dimensions can lead to significant errors in the estimated translation.
+Therefore, the translation generated by:
 
-### YOLO and geometric estimation
+```python
+cv.recoverPose(...)
+```
 
-The YOLO detection and SIFT/PnP estimation serve different roles.
+should not automatically be interpreted as meters.
 
-YOLO provides a detection/confidence gate, while the actual 6-DOF geometric pose is calculated using feature correspondences and PnP.
+To obtain metric scale, the system would need an additional source of scale such as:
 
-This means that a high YOLO confidence does not automatically guarantee a highly accurate pose.
+- IMU
+- Wheel odometry
+- Known object dimensions
+- Stereo baseline
+- LiDAR
+- GPS
+- Depth sensor
+- Ground-truth trajectory
+
+---
+
+# ⚠️ Current Implementation Limitations
+
+This repository is a research/prototype implementation and has several areas that should be addressed before using it as a production visual-odometry system.
+
+## Camera Intrinsics
+
+The triangulation function expects:
+
+```python
+mtx
+```
+
+for the camera intrinsic matrix.
+
+However, in the current `image_subscriber.py`, the member:
+
+```python
+self.mtx = None
+```
+
+is initialized but is not populated before being passed into `compute_point_cloud()`.
+
+Therefore, the point-cloud portion requires a valid camera intrinsic matrix to be supplied before triangulation can work correctly.
+
+A proper implementation should load calibration from:
+
+- ROS `CameraInfo`
+- a YAML calibration file
+- a ROS parameter
+- another calibrated-camera source
+
+---
+
+## Translation Scale
+
+As described above, the translation returned by monocular essential-matrix recovery is scale ambiguous.
+
+The current global trajectory therefore should not be interpreted as automatically metric.
+
+---
+
+## Pose Drift
+
+Because relative poses are accumulated:
+
+```text
+Pose 1
+  ↓
+Pose 2
+  ↓
+Pose 3
+  ↓
+Pose 4
+  ↓
+...
+```
+
+small errors accumulate over time.
+
+This produces drift.
+
+Long sequences can therefore cause the estimated trajectory to gradually diverge from the real camera trajectory.
+
+Potential solutions include:
+
+- Loop closure
+- Bundle adjustment
+- Keyframe selection
+- Pose graph optimization
+- IMU fusion
+- Stereo/depth measurements
+- SLAM frameworks such as ORB-SLAM
+
+---
+
+## Point-Cloud Consistency
+
+The current point-cloud generation uses the relative pose estimates and matched SIFT features.
+
+For high-quality reconstruction, additional filtering would be useful, including:
+
+- Reprojection-error filtering
+- Depth consistency checks
+- Cheirality checks
+- Outlier rejection
+- Temporal feature tracking
+- Bundle adjustment
+
+---
+
+# 🔬 Why Use Both Optical Flow and SIFT?
+
+The project intentionally contains two different feature-processing approaches.
+
+### Optical Flow
+
+Used for:
+
+```text
+Frame A → Frame B
+Frame B → Frame C
+```
+
+to estimate short-term camera motion.
+
+Optical flow is efficient because it tracks existing image features directly.
+
+### SIFT
+
+Used for more descriptor-based feature matching.
+
+SIFT provides:
+
+- Scale-invariant descriptors
+- More explicit feature correspondences
+- A useful basis for triangulation
+
+The architecture therefore separates the responsibilities:
+
+```text
+Optical Flow
+     ↓
+Camera Motion
+
+SIFT Matching
+     ↓
+Feature Correspondences
+     ↓
+3D Triangulation
+```
+
+This is the "multi-method" aspect of the current implementation.
+
+---
+
+# 🧪 Frame Quality Pipeline
+
+The preprocessing stage provides a useful workflow for preparing video data:
+
+```text
+Raw Video
+    ↓
+Frame Sampling
+    ↓
+Laplacian Blur Score
+    ↓
+Remove Blurry Frames
+    ↓
+Sequential JPEG Frames
+    ↓
+ROS 2 ImageTriple Publisher
+```
+
+This reduces the number of poor-quality frames entering the visual-odometry pipeline.
 
 ---
 
@@ -993,91 +1151,139 @@ This means that a high YOLO confidence does not automatically guarantee a highly
 
 Potential improvements include:
 
-- Convert the scripts into a complete ROS 2 Python package
-- Add `package.xml`
-- Add `setup.py` / `setup.cfg`
-- Add ROS 2 launch files
-- Replace hard-coded paths with ROS parameters
+### Camera Calibration
+
+- Load `CameraInfo` automatically
+- Add calibration YAML support
+- Publish calibrated camera parameters
+- Validate reprojection error
+
+### Visual Odometry
+
+- Add keyframe selection
+- Improve optical-flow outlier rejection
+- Track features over longer temporal windows
+- Add forward-backward optical-flow validation
+- Improve essential-matrix filtering
+
+### Scale
+
+- Fuse IMU measurements
+- Add stereo/depth support
+- Add known-scale landmarks
+- Integrate wheel odometry
+- Add GPS where appropriate
+
+### SLAM
+
+- Add loop closure
+- Add pose-graph optimization
+- Add bundle adjustment
+- Improve long-term trajectory consistency
+
+### 3D Reconstruction
+
+- Add reprojection-error filtering
+- Reject points behind the camera
+- Add depth consistency checks
+- Improve point-cloud density
+- Add persistent landmark tracking
+
+### ROS 2
+
+- Add a complete launch system
 - Add configurable camera calibration parameters
-- Publish calibration through a proper `CameraInfo` configuration
-- Add visualization of SIFT matches and homography in debugging mode
-- Add pose-confidence / reprojection-error metrics
-- Improve outlier rejection
-- Evaluate multiple PnP algorithms
-- Add temporal filtering to reduce pose jitter
-- Add Kalman filtering for smoother tracking
-- Add configurable YOLO confidence thresholds
-- Support live camera input instead of only prerecorded video
-- Improve TF frame naming and coordinate-frame documentation
-- Add automated tests for pose estimation
-- Benchmark pose accuracy against ground-truth measurements
+- Add RViz configuration
+- Add diagnostic topics
+- Add synchronized image/timestamp handling
+- Add automated integration tests
 
 ---
 
-# 🧪 Error Handling
-
-The pose-estimation function checks several failure conditions.
-
-### Images cannot be loaded
+# 🧱 Package Architecture
 
 ```text
-Error: Could not read one or both images.
+                    ┌─────────────────────┐
+                    │     Video File      │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │   sample_frames.py  │
+                    │                     │
+                    │ Sampling + Blur     │
+                    │ Detection           │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                       Frame Directory
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │  image_publisher    │
+                    │                     │
+                    │ Frames → ImageTriple│
+                    └──────────┬──────────┘
+                               │
+                      /image_triples
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │  image_subscriber   │
+                    └──────────┬──────────┘
+                               │
+              ┌────────────────┼─────────────────┐
+              │                │                 │
+              ▼                ▼                 ▼
+       Optical Flow      SIFT Matching      ROS 2 Pose
+              │                │                 │
+              ▼                ▼                 ▼
+       Essential Matrix    2D Points         TF / Path
+              │                │
+              ▼                ▼
+          R + t           Triangulation
+                               │
+                               ▼
+                         Point Cloud
 ```
-
-### No SIFT descriptors
-
-```text
-Error: No features detected.
-```
-
-### Too few feature matches
-
-```text
-Error: Not enough matches to compute homography.
-```
-
-### Homography failure
-
-```text
-Error: Homography computation failed.
-```
-
-### PnP failure
-
-```text
-Error: Pose estimation failed.
-```
-
-The ROS 2 subscriber logs pose-estimation failures and skips publishing the pose for that frame.
 
 ---
 
-# 📊 Outputs
+# 📊 ROS 2 Interface Summary
 
-The estimated pose ultimately contains:
+| Topic | Message Type | Purpose |
+|---|---|---|
+| `/image_triples` | `mono_perception_msgs/ImageTriple` | Three overlapping input frames |
+| `/camera/pose` | `geometry_msgs/PoseStamped` | Estimated camera pose |
+| `/camera/path` | `nav_msgs/Path` | Accumulated camera trajectory |
+| `/camera/point_cloud` | `sensor_msgs/PointCloud2` | Reconstructed 3D feature points |
 
-```text
-Translation
-───────────
-x
-y
-z
-
-Rotation
-────────
-x
-y
-z
-w
-```
-
-where the rotational components are represented as a quaternion for ROS 2 compatibility.
-
-The Euclidean distance from the camera to the estimated target position can also be calculated as:
+TF:
 
 ```text
-distance = √(x² + y² + z²)
+world → camera
 ```
+
+---
+
+# 📚 Main Technologies
+
+| Technology | Purpose |
+|---|---|
+| ROS 2 | Robotics middleware |
+| Python | Main implementation language |
+| OpenCV | Computer vision |
+| Lucas-Kanade Optical Flow | Feature tracking |
+| SIFT | Feature description and matching |
+| RANSAC | Outlier rejection |
+| Essential Matrix | Relative camera motion |
+| PnP-style geometry | Camera/scene geometry concepts |
+| Triangulation | 3D reconstruction |
+| NumPy | Numerical operations |
+| SciPy | Rotation/quaternion handling |
+| TF2 | Coordinate transforms |
+| RViz | Visualization |
+| Colcon | ROS 2 build system |
 
 ---
 
@@ -1090,15 +1296,16 @@ Computer Science & Engineering student interested in:
 - Computer Vision
 - Robotics
 - Autonomous Systems
-- Perception
+- Visual Odometry
 - SLAM
 - Sensor Fusion
-- 3D Localization
+- 3D Reconstruction
+- Perception Systems
 
 ---
 
 # 📄 License
 
-No open-source license is currently specified in this repository.
+No open-source license is currently specified for this project.
 
-If this project is intended to be distributed or reused publicly, consider adding an appropriate license.
+If the repository is intended for public reuse or distribution, consider adding an appropriate open-source license.
