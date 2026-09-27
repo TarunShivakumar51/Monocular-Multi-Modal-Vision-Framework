@@ -1,3 +1,5 @@
+# Hello
+
 """Frame extraction for monocular vision pipelines (VO / COLMAP SfM).
 
 Standalone preprocessing step: sample frames from an iPhone video at a
