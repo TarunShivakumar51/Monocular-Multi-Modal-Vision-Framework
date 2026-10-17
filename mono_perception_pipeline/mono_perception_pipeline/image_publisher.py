@@ -67,7 +67,7 @@ class ImageTriplePublisher(Node):
         self.declare_parameter('input_folder', '')
         self.declare_parameter('publish_rate_hz', 2.0)
         self.declare_parameter('topic_name', 'image_triples')
-        self.declare_parameter('frame_id', 'camera')
+        self.declare_parameter('frame_id', 'world')
 
         input_folder = self.get_parameter('input_folder') \
             .get_parameter_value().string_value

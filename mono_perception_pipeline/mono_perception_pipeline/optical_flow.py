@@ -11,10 +11,12 @@ lk_params = dict(winSize=(15, 15),
                  criteria=(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03))
 
 
-def compute_optical_flow(frame1: np.ndarray, frame2: np.ndarray):
+def compute_optical_flow(frame1: np.ndarray, frame2: np.ndarray, mtx: np.ndarray = None):
     """
     Returns (R, t, points1, points2) between two BGR frames.
-    points1/points2 are the matched keypoint coordinates (Nx2) for COLMAP.
+    R, t map points from frame1's camera to frame2's camera: X2 = R @ X1 + t.
+    points1/points2 are the inlier keypoint coordinates (Nx2) that agree with R, t.
+    mtx is the 3x3 camera intrinsics matrix; None falls back to focal=1, pp=(0, 0).
     """
     gray1 = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)
     gray2 = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)
@@ -28,8 +30,16 @@ def compute_optical_flow(frame1: np.ndarray, frame2: np.ndarray):
     good_old = p0[st == 1]
     good_new = p1[st == 1]
 
-    E, _ = cv.findEssentialMat(good_old, good_new, None,
-                               method=cv.RANSAC, prob=0.999, threshold=1.0)
-    _, R, t, _ = cv.recoverPose(E, good_old, good_new, None)
+    if mtx is None:
+        E, mask = cv.findEssentialMat(good_old, good_new, focal=1.0, pp=(0.0, 0.0),
+                                      method=cv.RANSAC, prob=0.999, threshold=1.0)
+        _, R, t, mask = cv.recoverPose(E, good_old, good_new, focal=1.0, pp=(0.0, 0.0), mask=mask)
+    else:
+        E, mask = cv.findEssentialMat(good_old, good_new, mtx,
+                                      method=cv.RANSAC, prob=0.999, threshold=1.0)
+        _, R, t, mask = cv.recoverPose(E, good_old, good_new, mtx, mask=mask)
 
-    return R, t, good_old, good_new
+    # keep only points that passed RANSAC and are in front of both cameras
+    inliers = mask.ravel() > 0
+
+    return R, t, good_old[inliers], good_new[inliers]

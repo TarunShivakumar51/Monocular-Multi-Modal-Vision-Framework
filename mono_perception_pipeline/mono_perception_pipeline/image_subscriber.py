@@ -6,7 +6,6 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformSta
 from sensor_msgs.msg import PointCloud2, PointField
 from cv_bridge import CvBridge,CvBridgeError
 from optical_flow import compute_optical_flow
-from feature_matching import compute_keypoints
 from triangulation import compute_point_cloud
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -22,6 +21,9 @@ class ImageSubscriber(Node):
         self.R_global = np.eye(3)
         self.t_global = np.zeros((3,1))
         self.mtx = None
+
+        self.path = Path()
+        self.path.header.frame_id = "world"
 
         self.bridge = CvBridge()
 
@@ -40,15 +42,18 @@ class ImageSubscriber(Node):
         except CvBridgeError as e:
             self.get_logger().info(e)
 
-        path = Path()
-        path.header = msg.header()
+        self.path.header.stamp = msg.header.stamp
 
-        R1, t1, good_old, good_new = compute_optical_flow(image_a, image_b)
-        R2, t2, good_old, good_new = compute_optical_flow(image_b, image_c)
+        R1, t1, points_a, points_b = compute_optical_flow(image_a, image_b, self.mtx)
+        R2, t2, points_b_bc, points_c = compute_optical_flow(image_b, image_c, self.mtx)
+
+        # camera a's pose in the world, needed to place pair 1's point cloud
+        R_world_a, t_world_a = self.R_global, self.t_global
 
         # Pair 1 (image a, b) - pose and path
-        self.t_global = np.add(self.t_global, np.matmul(self.R_global, t1))
-        self.R_global = np.matmul(R1, self.R_global)
+        # R1, t1 map camera a -> camera b, so camera b's pose in a is (R1.T, -R1.T @ t1)
+        self.R_global = self.R_global @ R1.T
+        self.t_global = self.t_global - self.R_global @ t1
 
         scipy_rotation = Rotation.from_matrix(self.R_global)
         global_quat_matrix = scipy_rotation.as_quat()
@@ -59,17 +64,17 @@ class ImageSubscriber(Node):
         pose_ab.orientation = Quaternion(x=global_quat_matrix[0], y=global_quat_matrix[1], z=global_quat_matrix[2], w=global_quat_matrix[3])
 
         pose_stamped_ab = PoseStamped()
-        pose_stamped_ab.header = msg.header()
+        pose_stamped_ab.header = msg.header
         pose_stamped_ab.pose = pose_ab
 
-        path.poses.append(pose_stamped_ab)
+        self.path.poses.append(pose_stamped_ab)
 
         self.pose_publisher.publish(pose_stamped_ab)
-        self.path_publisher.publish(path)
+        self.path_publisher.publish(self.path)
 
         # Pair 1 (image a, b) - tf broadcast
         transform_stamped_ab = TransformStamped()
-        transform_stamped_ab.header.stamp = self.get_clock().now().to_msg()
+        transform_stamped_ab.header.stamp = msg.header.stamp
         transform_stamped_ab.header.frame_id = "world"
         transform_stamped_ab.child_frame_id = "camera"
 
@@ -80,31 +85,37 @@ class ImageSubscriber(Node):
 
         self.tf_broadcaster.sendTransform(transform_stamped_ab)
 
-        # Pair 1 (image a, b) - point cloud
-        frame_a_keypoints, frame_b_keypoints = compute_keypoints(image_a, image_b)
-        point_cloud_matrix = compute_point_cloud(R1, t1, R2, t2, self.mtx, frame_a_keypoints, frame_b_keypoints)
-        point_cloud_matrix = np.array(point_cloud_matrix, dtype=np.float32)
-
         point_field = [PointField(name = 'x', offset = 0, datatype = 7, count = 1),
                        PointField(name = 'y', offset = 4, datatype = 7, count = 1),
                        PointField(name = 'z', offset = 8, datatype = 7, count = 1)]
 
-        point_cloud = PointCloud2()
-        point_cloud.header = msg.header()
-        point_cloud.height = 1
-        point_cloud.width = point_cloud_matrix.shape[0]
-        point_cloud.fields = point_field
-        point_cloud.is_bigendian = False
-        point_cloud.point_step = 12
-        point_cloud.row_step = 12 * point_cloud_matrix.shape[0]
-        point_cloud.data = point_cloud_matrix.tobytes()
-        point_cloud.is_dense = True
+        # Pair 1 (image a, b) - point cloud (skipped until the camera is calibrated)
+        if self.mtx is not None:
+            point_cloud_matrix = compute_point_cloud(R1, t1, self.mtx, points_a, points_b)
+            # camera a frame -> world frame
+            point_cloud_matrix = (R_world_a @ point_cloud_matrix.T + t_world_a).T
+            point_cloud_matrix = np.array(point_cloud_matrix, dtype=np.float32)
 
-        self.point_cloud_publisher.publish(point_cloud)
+            point_cloud = PointCloud2()
+            point_cloud.header.stamp = msg.header.stamp
+            point_cloud.header.frame_id = "world"
+            point_cloud.height = 1
+            point_cloud.width = point_cloud_matrix.shape[0]
+            point_cloud.fields = point_field
+            point_cloud.is_bigendian = False
+            point_cloud.point_step = 12
+            point_cloud.row_step = 12 * point_cloud_matrix.shape[0]
+            point_cloud.data = point_cloud_matrix.tobytes()
+            point_cloud.is_dense = True
+
+            self.point_cloud_publisher.publish(point_cloud)
+
+        # camera b's pose in the world, needed to place pair 2's point cloud
+        R_world_b, t_world_b = self.R_global, self.t_global
 
         # Pair 2 (image b, c) - pose and path
-        self.t_global = np.add(self.t_global, np.matmul(self.R_global, t2))
-        self.R_global = np.matmul(R2, self.R_global)
+        self.R_global = self.R_global @ R2.T
+        self.t_global = self.t_global - self.R_global @ t2
 
         scipy_rotation = Rotation.from_matrix(self.R_global)
         global_quat_matrix = scipy_rotation.as_quat()
@@ -115,17 +126,17 @@ class ImageSubscriber(Node):
         pose_bc.orientation = Quaternion(x=global_quat_matrix[0], y=global_quat_matrix[1], z=global_quat_matrix[2], w=global_quat_matrix[3])
 
         pose_stamped_bc = PoseStamped()
-        pose_stamped_bc.header = msg.header()
+        pose_stamped_bc.header = msg.header
         pose_stamped_bc.pose = pose_bc
 
-        path.poses.append(pose_stamped_bc)
+        self.path.poses.append(pose_stamped_bc)
 
         self.pose_publisher.publish(pose_stamped_bc)
-        self.path_publisher.publish(path)
+        self.path_publisher.publish(self.path)
 
         # Pair 2 (image b, c) - tf broadcast
         transform_stamped_bc = TransformStamped()
-        transform_stamped_bc.header.stamp = self.get_clock().now().to_msg()
+        transform_stamped_bc.header.stamp = msg.header.stamp
         transform_stamped_bc.header.frame_id = "world"
         transform_stamped_bc.child_frame_id = "camera"
 
@@ -136,23 +147,26 @@ class ImageSubscriber(Node):
 
         self.tf_broadcaster.sendTransform(transform_stamped_bc)
 
-        # Pair 2 (image b, c) - point cloud
-        frame_b_keypoints_bc, frame_c_keypoints = compute_keypoints(image_b, image_c)
-        point_cloud_matrix_bc = compute_point_cloud(R1, t1, R2, t2, self.mtx, frame_b_keypoints_bc, frame_c_keypoints)
-        point_cloud_matrix_bc = np.array(point_cloud_matrix_bc, dtype=np.float32)
+        # Pair 2 (image b, c) - point cloud (skipped until the camera is calibrated)
+        if self.mtx is not None:
+            point_cloud_matrix_bc = compute_point_cloud(R2, t2, self.mtx, points_b_bc, points_c)
+            # camera b frame -> world frame
+            point_cloud_matrix_bc = (R_world_b @ point_cloud_matrix_bc.T + t_world_b).T
+            point_cloud_matrix_bc = np.array(point_cloud_matrix_bc, dtype=np.float32)
 
-        point_cloud_bc = PointCloud2()
-        point_cloud_bc.header = msg.header()
-        point_cloud_bc.height = 1
-        point_cloud_bc.width = point_cloud_matrix_bc.shape[0]
-        point_cloud_bc.fields = point_field
-        point_cloud_bc.is_bigendian = False
-        point_cloud_bc.point_step = 12
-        point_cloud_bc.row_step = 12 * point_cloud_matrix_bc.shape[0]
-        point_cloud_bc.data = point_cloud_matrix_bc.tobytes()
-        point_cloud_bc.is_dense = True
+            point_cloud_bc = PointCloud2()
+            point_cloud_bc.header.stamp = msg.header.stamp
+            point_cloud_bc.header.frame_id = "world"
+            point_cloud_bc.height = 1
+            point_cloud_bc.width = point_cloud_matrix_bc.shape[0]
+            point_cloud_bc.fields = point_field
+            point_cloud_bc.is_bigendian = False
+            point_cloud_bc.point_step = 12
+            point_cloud_bc.row_step = 12 * point_cloud_matrix_bc.shape[0]
+            point_cloud_bc.data = point_cloud_matrix_bc.tobytes()
+            point_cloud_bc.is_dense = True
 
-        self.point_cloud_publisher.publish(point_cloud_bc)
+            self.point_cloud_publisher.publish(point_cloud_bc)
 
 def main(args=None):
     rclpy.init(args=args)
