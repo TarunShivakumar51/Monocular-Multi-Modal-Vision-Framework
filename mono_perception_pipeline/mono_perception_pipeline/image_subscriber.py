@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import rclpy
 from rclpy.node import Node
 from mono_perception_msgs.msg import ImageTriple
@@ -5,8 +7,8 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped, Transform, Vector3
 from sensor_msgs.msg import PointCloud2, PointField
 from cv_bridge import CvBridge,CvBridgeError
-from optical_flow import compute_optical_flow
-from triangulation import compute_point_cloud
+from mono_perception_pipeline.optical_flow import compute_optical_flow
+from mono_perception_pipeline.triangulation import compute_point_cloud
 import numpy as np
 from scipy.spatial.transform import Rotation
 from tf2_ros import TransformBroadcaster
@@ -64,7 +66,8 @@ class ImageSubscriber(Node):
         pose_ab.orientation = Quaternion(x=global_quat_matrix[0], y=global_quat_matrix[1], z=global_quat_matrix[2], w=global_quat_matrix[3])
 
         pose_stamped_ab = PoseStamped()
-        pose_stamped_ab.header = msg.header
+        pose_stamped_ab.header.stamp = msg.image_b.header.stamp
+        pose_stamped_ab.header.frame_id = "world"
         pose_stamped_ab.pose = pose_ab
 
         self.path.poses.append(pose_stamped_ab)
@@ -74,7 +77,7 @@ class ImageSubscriber(Node):
 
         # Pair 1 (image a, b) - tf broadcast
         transform_stamped_ab = TransformStamped()
-        transform_stamped_ab.header.stamp = msg.header.stamp
+        transform_stamped_ab.header.stamp = msg.image_b.header.stamp
         transform_stamped_ab.header.frame_id = "world"
         transform_stamped_ab.child_frame_id = "camera"
 
@@ -126,7 +129,8 @@ class ImageSubscriber(Node):
         pose_bc.orientation = Quaternion(x=global_quat_matrix[0], y=global_quat_matrix[1], z=global_quat_matrix[2], w=global_quat_matrix[3])
 
         pose_stamped_bc = PoseStamped()
-        pose_stamped_bc.header = msg.header
+        pose_stamped_bc.header.stamp = msg.image_c.header.stamp
+        pose_stamped_bc.header.frame_id = "world"
         pose_stamped_bc.pose = pose_bc
 
         self.path.poses.append(pose_stamped_bc)
@@ -136,7 +140,7 @@ class ImageSubscriber(Node):
 
         # Pair 2 (image b, c) - tf broadcast
         transform_stamped_bc = TransformStamped()
-        transform_stamped_bc.header.stamp = msg.header.stamp
+        transform_stamped_bc.header.stamp = msg.image_c.header.stamp
         transform_stamped_bc.header.frame_id = "world"
         transform_stamped_bc.child_frame_id = "camera"
 

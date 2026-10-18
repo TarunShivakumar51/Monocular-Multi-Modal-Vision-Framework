@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Publishes overlapping triples of frames from a fixed image folder for
 downstream VO.
 
