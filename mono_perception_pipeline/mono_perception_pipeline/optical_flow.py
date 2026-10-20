@@ -30,8 +30,10 @@ def compute_optical_flow(frame1: np.ndarray, frame2: np.ndarray, mtx: np.ndarray
     if p1 is not None:
         good_old = p0[st == 1]
         good_new = p1[st == 1]
+    else:
+         return None    
 
-    if good_old < 20 or good_new < 20:
+    if len(good_old) < 20 or len(good_new) < 20:
         return None
 
     if mtx is None:
@@ -53,7 +55,8 @@ def compute_optical_flow(frame1: np.ndarray, frame2: np.ndarray, mtx: np.ndarray
 
     # keep only points that passed RANSAC and are in front of both cameras
     inliers = mask.ravel() > 0
-    if len(inliers) < 15:
+    inliers_length = np.sum(inliers)
+    if inliers_length < 15:
          return None
 
     return R, t, good_old[inliers], good_new[inliers]

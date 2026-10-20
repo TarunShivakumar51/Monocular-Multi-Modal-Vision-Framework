@@ -74,8 +74,13 @@ class ImageSubscriber(Node):
 
             self.first_message = False
 
-        R1, t1, points_a, points_b = compute_optical_flow(image_a, image_b, self.mtx)
-        R2, t2, points_b_bc, points_c = compute_optical_flow(image_b, image_c, self.mtx)
+        optical_flow_pair1 = compute_optical_flow(image_a, image_b, self.mtx)
+        optical_flow_pair2 = compute_optical_flow(image_b, image_c, self.mtx)
+        if optical_flow_pair1 == None or optical_flow_pair2 == None:
+            return
+        else:
+            R1, t1, points_a, points_b = optical_flow_pair1
+            R2, t2, points_b_bc, points_c = optical_flow_pair2
 
         # camera a's pose in the world, needed to place pair 1's point cloud
         R_world_a, t_world_a = self.R_global, self.t_global
