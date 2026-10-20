@@ -26,20 +26,34 @@ def compute_optical_flow(frame1: np.ndarray, frame2: np.ndarray, mtx: np.ndarray
         raise ValueError("No features found in frame1")
 
     p1, st, _ = cv.calcOpticalFlowPyrLK(gray1, gray2, p0, None, **lk_params)
+    
+    if p1 is not None:
+        good_old = p0[st == 1]
+        good_new = p1[st == 1]
 
-    good_old = p0[st == 1]
-    good_new = p1[st == 1]
+    if good_old < 20 or good_new < 20:
+        return None
 
     if mtx is None:
         E, mask = cv.findEssentialMat(good_old, good_new, focal=1.0, pp=(0.0, 0.0),
                                       method=cv.RANSAC, prob=0.999, threshold=1.0)
+        if E.shape != (3,3):
+            return None
+
         _, R, t, mask = cv.recoverPose(E, good_old, good_new, focal=1.0, pp=(0.0, 0.0), mask=mask)
+
     else:
         E, mask = cv.findEssentialMat(good_old, good_new, mtx,
                                       method=cv.RANSAC, prob=0.999, threshold=1.0)
+
+        if E.shape != (3,3):
+                    return None
+        
         _, R, t, mask = cv.recoverPose(E, good_old, good_new, mtx, mask=mask)
 
     # keep only points that passed RANSAC and are in front of both cameras
     inliers = mask.ravel() > 0
+    if len(inliers) < 15:
+         return None
 
     return R, t, good_old[inliers], good_new[inliers]

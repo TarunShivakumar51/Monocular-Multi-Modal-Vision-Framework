@@ -22,6 +22,7 @@ class ImageSubscriber(Node):
 
         self.R_global = np.eye(3)
         self.t_global = np.zeros((3,1))
+        self.first_message = True
         self.mtx = None
 
         self.path = Path()
@@ -42,9 +43,36 @@ class ImageSubscriber(Node):
             image_b = self.bridge.imgmsg_to_cv2(msg.image_b, "bgr8")
             image_c = self.bridge.imgmsg_to_cv2(msg.image_c, "bgr8")
         except CvBridgeError as e:
-            self.get_logger().info(e)
+            self.get_logger().info(str(e))
+            return
 
         self.path.header.stamp = msg.header.stamp
+
+        if self.first_message:
+            first_pose = PoseStamped()
+
+            # Header for this individual pose
+            first_pose.header.frame_id = "world"
+            first_pose.header.stamp = self.get_clock().now().to_msg()
+
+            # Position (x, y, z)
+            first_pose.pose.position.x = 0.0
+            first_pose.pose.position.y = 0.0
+            first_pose.pose.position.z = 0.0
+
+            # Identity orientation quaternion (x, y, z, w)
+            first_pose.pose.orientation.x = 0.0
+            first_pose.pose.orientation.y = 0.0
+            first_pose.pose.orientation.z = 0.0
+            first_pose.pose.orientation.w = 1.0
+
+            # Add the pose to the path's poses array
+            self.path.poses.append(first_pose)
+
+            self.pose_publisher.publish(first_pose)
+            self.path_publisher.publish(self.path)
+
+            self.first_message = False
 
         R1, t1, points_a, points_b = compute_optical_flow(image_a, image_b, self.mtx)
         R2, t2, points_b_bc, points_c = compute_optical_flow(image_b, image_c, self.mtx)
